@@ -1,0 +1,60 @@
+//@version=5
+// Se aumenta el límite de líneas y etiquetas a 500 para poder ver el historial de días anteriores
+indicator("Niveles intra diarios", overlay=true, max_lines_count=500, max_labels_count=500)
+
+// --- CONFIGURACIONES ---
+// Separación modificada a 0.5 por defecto
+pct_sup = input.float(0.5, title="Separación Niveles Superiores (%)", step=0.1) / 100
+pct_inf = input.float(0.5, title="Separación Niveles Inferiores (%)", step=0.1) / 100
+
+col_eje   = input.color(color.new(color.white, 0), title="Color Eje Central")
+col_sup   = input.color(color.new(color.green, 30), title="Color Niveles Superiores")
+col_inf   = input.color(color.new(color.red, 30), title="Color Niveles Inferiores")
+
+// --- CÁLCULOS ---
+// Obtener el cierre del día anterior
+cierre_ant = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
+
+// Cálculos de niveles superiores (compuestos)
+sup1 = cierre_ant * (1 + pct_sup)
+sup2 = sup1 * (1 + pct_sup)
+sup3 = sup2 * (1 + pct_sup)
+sup4 = sup3 * (1 + pct_sup)
+
+// Cálculos de niveles inferiores (compuestos)
+inf1 = cierre_ant * (1 - pct_inf)
+inf2 = inf1 * (1 - pct_inf)
+inf3 = inf2 * (1 - pct_inf)
+inf4 = inf3 * (1 - pct_inf)
+
+// --- DIBUJO DE LÍNEAS Y ETIQUETAS ---
+// Creamos una función para dibujar los 9 niveles sin repetir código
+dibujar_nivel(precio, color_linea, grosor, t_inicio, t_fin) =>
+    // Dibuja la línea horizontal
+    line.new(x1=t_inicio, y1=precio, x2=t_fin, y2=precio, xloc=xloc.bar_time, color=color_linea, width=grosor)
+    // Dibuja la etiqueta con el precio al final de la línea (lado derecho)
+    label.new(x=t_fin, y=precio, text=str.tostring(precio, format.mintick), xloc=xloc.bar_time, color=color.new(color.black, 100), textcolor=color_linea, style=label.style_label_left, size=size.small)
+
+// Detectar la primera vela de un nuevo día
+is_new_day = ta.change(time("D")) != 0
+
+if is_new_day
+    // El inicio de la línea es la hora actual de la apertura del día
+    start_t = time
+    // El fin es exactamente 24 horas después (24 * 60 * 60 * 1000 milisegundos = 86400000)
+    end_t = start_t + 86400000 
+
+    // Eje Central (Línea más gruesa)
+    dibujar_nivel(cierre_ant, col_eje, 2, start_t, end_t)
+
+    // Niveles Superiores
+    dibujar_nivel(sup1, col_sup, 1, start_t, end_t)
+    dibujar_nivel(sup2, col_sup, 1, start_t, end_t)
+    dibujar_nivel(sup3, col_sup, 1, start_t, end_t)
+    dibujar_nivel(sup4, col_sup, 1, start_t, end_t)
+
+    // Niveles Inferiores
+    dibujar_nivel(inf1, col_inf, 1, start_t, end_t)
+    dibujar_nivel(inf2, col_inf, 1, start_t, end_t)
+    dibujar_nivel(inf3, col_inf, 1, start_t, end_t)
+    dibujar_nivel(inf4, col_inf, 1, start_t, end_t)
